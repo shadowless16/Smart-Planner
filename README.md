@@ -1,0 +1,1 @@
+cd "C:\Users\Ak David\Desktop\Programming Files\Smart Planner\backend" && python main.py

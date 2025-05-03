@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4a6fa5">
+    <title>Smart Daily Planner</title>
+    <link rel="stylesheet" href="/templates/static/styles.css">
+    <link rel="manifest" href="/templates/static/manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous">
+    <link rel="icon" href="icons/favicon.ico">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left sidebar menu -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                        <path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"></path>
+                        <path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8"></path>
+                        <path d="M15 2v5h5"></path>
+                    </svg>
+                </div>
+                <h1 class="brand-name">Smart Planner</h1>
+            </div>
+
+            <div class="user-profile">
+                <div class="avatar">JP</div>
+                <div class="user-info">
+                    <p class="user-name">Jamie Parker</p>
+                    <p class="user-plan">Premium Plan</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <div class="nav-item active">Today</div>
+                <div class="nav-item">Calendar</div>
+                <div class="nav-item">Goals</div>
+                <div class="nav-item">Settings</div>
+            </nav>
+
+            <div class="progress-section">
+                <div class="progress-header">
+                    <h3 class="progress-title">Today's Progress</h3>
+                    <span class="progress-count">2/7 tasks</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-indicator" style="width: 28%;"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main content area -->
+        <main class="main-content" id="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-top">
+                        <h1 class="page-title">Today</h1>
+                        <p class="current-date" id="current-date">Thursday, May 1, 2025</p>
+                    </div>
+
+                    <div class="header-actions">
+                        <button class="button button-outline">Add Task</button>
+                        <button class="button button-primary">AI Suggestions</button>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tabs-list">
+                        <div class="tab active" data-tab="plans">Plans</div>
+                        <div class="tab" data-tab="goals">Goals</div>
+                        <div class="tab" data-tab="content">Content Generator</div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="plans-tab" class="tab-content active">
+                <section class="timeline">
+                    <div class="timeline-item">
+                        <div class="time-indicator">
+                            <span class="time-label">6:00 AM</span>
+                            <div class="time-line"></div>
+                        </div>
+                        <div class="empty-slot">
+                            <button class="add-task-button">Add task</button>
+                        </div>
+                    </div>
+                    <!-- Additional timeline items can be added dynamically -->
+                </section>
+            </div>
+
+            <div id="goal-tab" class="tab-content">
+                <!-- Goal input and button -->
+                <input type="text" id="goal-input" placeholder="Enter your goal" />
+                <button id="fetch-goal-suggestions-btn">Get Suggestions</button>
+
+                <!-- Container for goal suggestions -->
+                <div id="goal-suggestions-container"></div>
+            </div>
+
+            <div id="content-tab" class="tab-content">
+                <div class="container">
+                    <h1>AI Content Generator</h1>
+
+                    <div class="grid">
+                        <!-- Input Parameters Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Input Parameters</h2>
+                                <p class="card-description">Enter your topic and select content preferences</p>
+                            </div>
+                            <div class="card-content">
+                                <div class="form-group">
+                                    <label for="prompt">Topic or Keywords</label>
+                                    <input id="prompt" type="text" placeholder="Enter your topic or keywords...">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="content-type">Content Type</label>
+                                    <select id="content-type">
+                                        <option value="blog">Blog Post</option>
+                                        <option value="social">Social Media Update</option>
+                                        <option value="email">Email</option>
+                                        <option value="article">Article</option>
+                                        <option value="product">Product Description</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tone">Tone</label>
+                                    <select id="tone">
+                                        <option value="formal">Formal</option>
+                                        <option value="casual">Casual</option>
+                                        <option value="humorous">Humorous</option>
+                                        <option value="professional">Professional</option>
+                                        <option value="enthusiastic">Enthusiastic</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button id="generate-btn" class="button button-primary button-full">
+                                    <span id="generate-icon">✨</span>
+                                    <span id="generate-text">Generate Content</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Generated Content Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Generated Content</h2>
+                                <p class="card-description">View, edit, and save your AI-generated content</p>
+                            </div>
+                            <div class="card-content">
+                                <div id="content-container">
+                                    <div id="content-placeholder" class="content-placeholder">
+                                        <p>Generated content will appear here</p>
+                                    </div>
+
+                                    <div id="tabs-container" class="tabs" style="display: none;">
+                                        <div class="tabs-list">
+                                            <div id="tab-generated" class="tab-trigger active">Generated</div>
+                                            <div id="tab-edit" class="tab-trigger">Edit</div>
+                                        </div>
+                                        <div id="tab-content-generated" class="tab-content active">
+                                            <div id="generated-content" class="content-display"></div>
+                                        </div>
+                                        <div id="tab-content-edit" class="tab-content">
+                                            <textarea id="edited-content"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div id="character-count" class="character-count" style="display: none;">
+                                        Character count: 0
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button id="regenerate-btn" class="button button-outline" disabled>
+                                    <span class="button-icon">🔄</span>
+                                    Regenerate
+                                </button>
+                                <button id="save-btn" class="button button-primary" disabled>
+                                    <span class="button-icon">💾</span>
+                                    Save Content
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="toast-container"></div>
+
+    </div>
+
+    <!-- Task Form Overlay -->
+    <div class="overlay" id="task-form-overlay">
+        <div class="task-form-container">
+            <form id="task-form">
+                <h3>Add New Task</h3>
+
+                <div id="form-spinner" class="spinner-overlay">
+                    <div class="spinner"></div>
+                </div>
+                <div class="form-group">
+                    <label for="task-title">Title</label>
+                    <input type="text" id="task-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="task-datetime">Date & Time</label>
+                    <input type="datetime-local" id="task-datetime" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-duration">Duration (minutes)</label>
+                    <input type="number" id="task-duration" min="15" step="15" value="30">
+                </div>
+                <!-- Suggest Subtasks Button & Container -->
+                <button type="button" id="suggest-btn" class="suggest-btn">Suggest Subtasks</button>
+                <div id="suggestions-container" class="suggestions-container"></div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancel-task">Cancel</button>
+                    <button type="submit">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/templates/static/app.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/templates/static/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

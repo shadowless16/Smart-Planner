@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.*
+!.env.template
+.env.template
+
+# Google OAuth credentials
+backend/credentials.json
+backend/user_token.json
+backend/token.pickle
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+
+# Editor files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Static files
+templates/static/*.css.map
+templates/static/*.js.map
+.env.template

@@ -1,0 +1,12 @@
+.env
+backend/credentials.json
+backend/user_token.json
+
+# OpenAI API Keys
+sk-[0-9a-zA-Z]{48}
+
+# Google OAuth Client IDs
+[0-9]+-[0-9a-zA-Z]+\.apps\.googleusercontent\.com
+
+# Google OAuth Client Secrets
+GOCSPX-[0-9a-zA-Z]+
