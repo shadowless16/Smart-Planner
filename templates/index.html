@@ -36,10 +36,10 @@
             </div>
 
             <nav class="nav-menu">
-                <div class="nav-item active">Today</div>
-                <div class="nav-item">Calendar</div>
-                <div class="nav-item">Goals</div>
-                <div class="nav-item">Settings</div>
+                <div class="nav-item active" data-tab="today">Today</div>
+                <div class="nav-item" data-tab="calendar">Calendar</div>
+                <div class="nav-item" data-tab="goals">Goals</div>
+                <div class="nav-item" data-tab="settings">Settings</div>
             </nav>
 
             <div class="progress-section">
@@ -77,7 +77,7 @@
                 </div>
             </header>
 
-            <div id="plans-tab" class="tab-content active">
+            <div id="today-tab" class="tab-content active">
                 <section class="timeline">
                     <div class="timeline-item">
                         <div class="time-indicator">
@@ -91,14 +91,27 @@
                     <!-- Additional timeline items can be added dynamically -->
                 </section>
             </div>
+            <div id="calendar-tab" class="tab-content">
+                <div id="calendar-container"></div>
+            </div>
 
             <div id="goals-tab" class="tab-content">
-                <!-- Goal input and button -->
-                <input type="text" id="goal-input" placeholder="Enter your goal" />
-                <button id="fetch-goal-suggestions-btn">Get Suggestions</button>
-
-                <!-- Container for goal suggestions -->
-                <div id="goal-suggestions-container"></div>
+                <div class="card goal-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Goal Suggestions</h2>
+                        <p class="card-description">Enter your goal and get actionable micro-tasks to help you achieve it.</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="goal-input">Your Goal</label>
+                            <input type="text" id="goal-input" placeholder="Enter your goal" />
+                        </div>
+                        <button id="fetch-goal-suggestions-btn" class="button button-primary">Get Suggestions</button>
+                    </div>
+                    <div class="card-footer">
+                        <div id="goal-suggestions-container"></div>
+                    </div>
+                </div>
             </div>
 
             <div id="content-tab" class="tab-content">
@@ -188,6 +201,23 @@
                                     Save Content
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-tab" class="tab-content">
+                <div class="card settings-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Settings</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="dark-mode-toggle">Dark Mode</label>
+                            <label class="switch">
+                                <input type="checkbox" id="dark-mode-toggle">
+                                <span class="slider round"></span>
+                            </label>
                         </div>
                     </div>
                 </div>

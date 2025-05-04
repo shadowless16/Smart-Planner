@@ -227,6 +227,40 @@ console.log("Setting up DOMContentLoaded listener");
      const suggestionElement = document.createElement('div');
      suggestionElement.className = 'goal-suggestion-item';
      suggestionElement.textContent = suggestion;
+     // Add icon
+     suggestionElement.innerHTML = `<span class="goal-suggestion-icon">🎯</span> <span class="goal-suggestion-text">${suggestion}</span>`;
+     // Add click handler for interactivity
+     suggestionElement.addEventListener('click', (e) => {
+       e.stopPropagation();
+       // Remove any existing popup
+       document.querySelectorAll('.goal-suggestion-popup').forEach(p => p.remove());
+       // Create popup menu
+       const popup = document.createElement('div');
+       popup.className = 'goal-suggestion-popup';
+       popup.innerHTML = `
+         <button class="popup-btn add-goal">Add as Goal</button>
+         <button class="popup-btn add-plan">Add as Plan</button>
+       `;
+       // Position popup
+       popup.style.position = 'absolute';
+       popup.style.left = e.clientX + 'px';
+       popup.style.top = e.clientY + 'px';
+       // Add handlers
+       popup.querySelector('.add-goal').onclick = () => {
+         alert('Added as Goal: ' + suggestion);
+         popup.remove();
+       };
+       popup.querySelector('.add-plan').onclick = () => {
+         alert('Added as Plan: ' + suggestion);
+         popup.remove();
+       };
+       // Remove popup on click outside
+       document.addEventListener('click', function handler() {
+         popup.remove();
+         document.removeEventListener('click', handler);
+       });
+       document.body.appendChild(popup);
+     });
      goalSuggestionsContainer.appendChild(suggestionElement);
    });
  }
@@ -433,6 +467,170 @@ function calculateEndTime(startTime, durationMinutes) {
   return end.toISOString().slice(0, 19) + 'Z';
 }
 
+// Sidebar tab switching
+function handleSidebarTabClick(event) {
+  const selectedTab = event.currentTarget.dataset.tab;
+  // Remove active from all sidebar tabs
+  document.querySelectorAll('.nav-item').forEach(tab => tab.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  // Hide all main tab contents
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  // Show the selected main tab content
+  const mainTab = document.getElementById(`${selectedTab}-tab`);
+  if (mainTab) mainTab.classList.add('active');
+}
+// Add event listeners to sidebar tabs
+ document.querySelectorAll('.nav-item').forEach(tab => {
+   tab.addEventListener('click', handleSidebarTabClick);
+ });
+
+// Helper: fetch all events for a month
+async function fetchMonthEvents(year, month) {
+  // month: 0-based
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
+  const startISO = start.toISOString();
+  const endISO = end.toISOString();
+  const response = await fetch(`${API_BASE_URL}/calendar/events?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`);
+  if (!response.ok) return [];
+  const data = await response.json();
+  // Assume data.events is a list of events with ISO date strings
+  return data.events || [];
+}
+// Enhanced calendar rendering with event count
+async function renderCalendar(year, month) {
+  const calendarContainer = document.getElementById('calendar-container');
+  calendarContainer.innerHTML = '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  // Fetch events for the month
+  const events = await fetchMonthEvents(year, month);
+  // Map: day number -> count
+  const eventCount = {};
+  events.forEach(ev => {
+    let dateStr = ev.start && ev.start.dateTime ? ev.start.dateTime : ev.start.date;
+    if (dateStr) {
+      const d = new Date(dateStr);
+      if (d.getMonth() === month && d.getFullYear() === year) {
+        const day = d.getDate();
+        eventCount[day] = (eventCount[day] || 0) + 1;
+      }
+    }
+  });
+  // Header
+  const header = document.createElement('div');
+  header.className = 'calendar-header';
+  header.innerHTML = `
+    <button class="calendar-nav prev-month">&#8592;</button>
+    <span class="calendar-title">${monthNames[month]} ${year}</span>
+    <button class="calendar-nav next-month">&#8594;</button>
+  `;
+  calendarContainer.appendChild(header);
+  // Days of week
+  const daysRow = document.createElement('div');
+  daysRow.className = 'calendar-days-row';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(day => {
+    const d = document.createElement('div');
+    d.className = 'calendar-day-label';
+    d.textContent = day;
+    daysRow.appendChild(d);
+  });
+  calendarContainer.appendChild(daysRow);
+  // Dates grid
+  const grid = document.createElement('div');
+  grid.className = 'calendar-grid';
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    const empty = document.createElement('div');
+    empty.className = 'calendar-day empty';
+    grid.appendChild(empty);
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const date = new Date(year, month, d);
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    dayEl.textContent = d;
+    if (date.getTime() === today.getTime()) {
+      dayEl.classList.add('today');
+    }
+    // Show event count badge
+    if (eventCount[d]) {
+      const badge = document.createElement('span');
+      badge.className = 'calendar-event-badge';
+      badge.textContent = eventCount[d];
+      dayEl.appendChild(badge);
+    }
+    dayEl.addEventListener('click', () => {
+      alert(`Clicked: ${monthNames[month]} ${d}, ${year}`);
+    });
+    grid.appendChild(dayEl);
+  }
+  calendarContainer.appendChild(grid);
+  // Navigation
+  header.querySelector('.prev-month').onclick = () => {
+    let newMonth = month - 1;
+    let newYear = year;
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear--;
+    }
+    renderCalendar(newYear, newMonth);
+  };
+  header.querySelector('.next-month').onclick = () => {
+    let newMonth = month + 1;
+    let newYear = year;
+    if (newMonth > 11) {
+      newMonth = 0;
+      newYear++;
+    }
+    renderCalendar(newYear, newMonth);
+  };
+}
+// Render calendar on Calendar tab show
+function setupCalendarTab() {
+  const calendarTab = document.getElementById('calendar-tab');
+  if (!calendarTab) return;
+  // Show current month by default
+  const now = new Date();
+  renderCalendar(now.getFullYear(), now.getMonth());
+}
+// Show calendar when Calendar tab is activated
+const sidebarTabs = document.querySelectorAll('.nav-item');
+sidebarTabs.forEach(tab => {
+  tab.addEventListener('click', (e) => {
+    if (tab.dataset.tab === 'calendar') {
+      setupCalendarTab();
+    }
+  });
+});
+
+// Dark mode toggle logic
+function setDarkMode(enabled) {
+  if (enabled) {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('darkMode', 'true');
+  } else {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('darkMode', 'false');
+  }
+}
+function setupDarkModeToggle() {
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (!toggle) return;
+  // Load preference
+  const darkPref = localStorage.getItem('darkMode') === 'true';
+  toggle.checked = darkPref;
+  setDarkMode(darkPref);
+  toggle.addEventListener('change', () => {
+    setDarkMode(toggle.checked);
+  });
+}
+
  // Initialize
  function init() {
    console.log("init() called");
@@ -615,6 +813,7 @@ function calculateEndTime(startTime, durationMinutes) {
  }
 
  // Run initialization
+ setupDarkModeToggle();
 }
 
 document.addEventListener('DOMContentLoaded', init);

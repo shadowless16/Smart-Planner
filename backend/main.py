@@ -2,12 +2,13 @@
 
 from fastapi import FastAPI, Request, HTTPException, APIRouter, Query
 from calendar_sync import create_event
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os, json
 import os.path
 from pathlib import Path
+from itsdangerous import URLSafeSerializer, BadSignature
 
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -55,15 +56,9 @@ REDIRECT_URI = get_redirect_uri()
 # In-memory store (use MongoDB later)
 user_sessions = {}
 
-SESSION_FILE = os.path.join(os.path.dirname(__file__), "user_token.json")
-
-# Load session from file if it exists
-if os.path.exists(SESSION_FILE):
-    with open(SESSION_FILE, "r") as f:
-        try:
-            user_sessions["user"] = json.load(f)
-        except Exception:
-            pass
+SECRET_KEY = os.getenv('COOKIE_SECRET', 'super-secret-key')
+COOKIE_NAME = 'planner_token'
+serializer = URLSafeSerializer(SECRET_KEY, salt='planner-google-oauth')
 
 # Update static file and template serving with absolute paths and MIME types
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -127,8 +122,8 @@ def auth_callback(request: Request):
     flow.fetch_token(code=code)
     credentials = flow.credentials
 
-    # Store token (basic example – secure this in prod)
-    user_sessions["user"] = {
+    # Store token in a secure cookie (per device)
+    creds_dict = {
         "token": credentials.token,
         "refresh_token": credentials.refresh_token,
         "token_uri": credentials.token_uri,
@@ -136,49 +131,54 @@ def auth_callback(request: Request):
         "client_secret": credentials.client_secret,
         "scopes": credentials.scopes,
     }
-    # Save session to file for persistence
-    with open(SESSION_FILE, "w") as f:
-        json.dump(user_sessions["user"], f)
+    cookie_val = serializer.dumps(creds_dict)
+    response = HTMLResponse(content="<h2>✅ Auth Successful! You can now use the planner.</h2>")
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=cookie_val,
+        httponly=True,
+        max_age=60*60*24*30,  # 30 days
+        samesite="lax"
+    )
+    return response
 
-    return HTMLResponse(content="<h2>✅ Auth Successful! You can now use the planner.</h2>")
+def get_user_creds(request: Request):
+    cookie = request.cookies.get(COOKIE_NAME)
+    if not cookie:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    try:
+        creds = serializer.loads(cookie)
+        return creds
+    except BadSignature:
+        raise HTTPException(status_code=401, detail="Invalid session cookie")
 
 @app.get("/calendar/events")
-def list_events():
-    if "user" not in user_sessions:
-        raise HTTPException(status_code=401, detail="User not authenticated")
-
-    creds = Credentials(**user_sessions["user"])
-    service = build("calendar", "v3", credentials=creds)
-
-    # Get today's date range
-    now = datetime.utcnow()
-    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + 'Z'
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat() + 'Z'
-
+def list_events(request: Request, start: str = None, end: str = None):
+    creds = get_user_creds(request)
+    service = build("calendar", "v3", credentials=Credentials(**creds))
+    from typing import Optional
+    from datetime import datetime
+    # If start and end are provided, use them; else default to today
+    if start and end:
+        try:
+            time_min = datetime.fromisoformat(start.replace('Z', '+00:00')).isoformat() + 'Z'
+            time_max = datetime.fromisoformat(end.replace('Z', '+00:00')).isoformat() + 'Z'
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid date format for start or end")
+    else:
+        now = datetime.utcnow()
+        time_min = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + 'Z'
+        time_max = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat() + 'Z'
     events_result = service.events().list(
         calendarId="primary",
-        timeMin=start_of_day,
-        timeMax=end_of_day,
+        timeMin=time_min,
+        timeMax=time_max,
         singleEvents=True,
-        orderBy="startTime"
+        orderBy="startTime",
+        maxResults=2500
     ).execute()
-
     events = events_result.get("items", [])
-
-    # Generate a full 24-hour timeline
-    timeline = []
-    for hour in range(24):
-        time_label = (datetime(2000, 1, 1, hour, 0)).strftime('%I %p').lstrip('0')
-        timeline.append({"time": time_label, "task": None})
-
-    # Map tasks to the timeline
-    for event in events:
-        start = event.get("start", {}).get("dateTime", event.get("start", {}).get("date"))
-        if start:
-            start_hour = datetime.fromisoformat(start.replace('Z', '+00:00')).hour
-            timeline[start_hour]["task"] = event.get("summary", "Untitled Event")
-
-    return {"timeline": timeline}
+    return {"events": events}
 
 class TaskRequest(BaseModel):
     task_summary: str
@@ -193,11 +193,8 @@ class MoodTopicRequest(BaseModel):
     mood_or_topic: str
 
 @app.post("/create_task")
-def create_task(task: TaskRequest):
-    if "user" not in user_sessions:
-        raise HTTPException(status_code=401, detail="User not authenticated")
-
-    creds = user_sessions["user"]
+def create_task(task: TaskRequest, request: Request):
+    creds = get_user_creds(request)
     try:
         result = create_event(
             creds,
