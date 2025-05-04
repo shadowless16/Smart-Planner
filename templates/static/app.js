@@ -11,7 +11,7 @@ console.log("Setting up DOMContentLoaded listener");
  const currentDateElement = document.getElementById('current-date');
 
  // Define the base URL for the backend API
- const API_BASE_URL = 'http://127.0.0.1:8000';
+ const API_BASE_URL = 'https://smart-planner-dad4.onrender.com';
 
  // Set current date
  function setCurrentDate() {
