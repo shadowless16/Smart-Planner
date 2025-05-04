@@ -5,21 +5,20 @@ const CACHE_NAME = 'smart-planner-cache-v1';
 
 // Assets to cache
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/styles.css',
-  '/manifest.json',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png',
-  '/icons/maskable-icon.png',
-  '/icons/favicon.ico'
+  'index.html',
+  'static/app.js',
+  'static/styles.css',
+  'static/manifest.json',
+  'static/icons/icon-72x72.png',
+  'static/icons/icon-96x96.png',
+  'static/icons/icon-128x128.png',
+  'static/icons/icon-144x144.png',
+  'static/icons/icon-152x152.png',
+  'static/icons/icon-192x192.png',
+  'static/icons/icon-384x384.png',
+  'static/icons/icon-512x512.png',
+  'static/icons/maskable-icon.png',
+  'static/icons/favicon.ico'
 ];
 
 // Install event - cache assets

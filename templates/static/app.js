@@ -1,3 +1,7 @@
+console.log("app.js loaded!");
+console.log("Setting up DOMContentLoaded listener");
+
+
 // DOM Elements
  const sidebarToggle = document.getElementById('sidebar-toggle');
  const sidebar = document.getElementById('sidebar');
@@ -7,7 +11,7 @@
  const currentDateElement = document.getElementById('current-date');
 
  // Define the base URL for the backend API
- const API_BASE_URL = window.location.origin;
+ const API_BASE_URL = 'http://127.0.0.1:8000';
 
  // Set current date
  function setCurrentDate() {
@@ -154,19 +158,24 @@
  async function fetchTasks() {
    try {
      const response = await fetch(`${API_BASE_URL}/calendar/events`);
+     if (response.status === 401) {
+       // Redirect to auth endpoint if unauthorized
+       window.location.href = `${API_BASE_URL}/auth`;
+       return;
+     }
      if (!response.ok) {
        throw new Error('Failed to fetch tasks');
      }
      const data = await response.json();
-     console.log('Full response data:', data); // Log the full response for debugging
+     console.log('Full response data:', data);
 
      // Ensure data.timeline exists and is an array
      if (Array.isArray(data.timeline)) {
        console.log('Timeline:', data.timeline);
-       renderTasks(data.timeline); // Render tasks in the timeline
+       renderTasks(data.timeline);
      } else {
        console.warn('No valid timeline found in the response');
-       renderTasks([]); // Render an empty timeline as a fallback
+       renderTasks([]);
      }
    } catch (error) {
      console.error('Error fetching tasks:', error);
@@ -176,7 +185,7 @@
  // Fetch AI suggestions from the backend
  async function fetchAISuggestions() {
    try {
-     const response = await fetch(`${API_BASE_URL}/ai/suggest-tasks`);
+     const response = await fetch(`${API_BASE_URL}/api/suggest-tasks`);
      if (!response.ok) {
        throw new Error('Failed to fetch AI suggestions');
      }
@@ -191,7 +200,7 @@
  // Fetch goal suggestions from the backend
  async function fetchGoalSuggestions(goal) {
    try {
-     const response = await fetch(`${API_BASE_URL}/ai/goal-suggestions?goal=${encodeURIComponent(goal)}`);
+     const response = await fetch(`${API_BASE_URL}/api/goal-suggestions?goal=${encodeURIComponent(goal)}`);
      if (!response.ok) {
        throw new Error('Failed to fetch goal suggestions');
      }
@@ -205,8 +214,14 @@
 
  // Render goal suggestions in the Goal tab
  function renderGoalSuggestions(suggestions) {
+   console.log('Rendering goal suggestions:', suggestions);
    const goalSuggestionsContainer = document.getElementById('goal-suggestions-container');
    goalSuggestionsContainer.innerHTML = ''; // Clear existing suggestions
+
+   if (!suggestions || suggestions.length === 0) {
+     goalSuggestionsContainer.innerHTML = '<div>No suggestions found.</div>';
+     return;
+   }
 
    suggestions.forEach(suggestion => {
      const suggestionElement = document.createElement('div');
@@ -219,7 +234,13 @@
  // Fetch generated content from the backend
  async function fetchGeneratedContent(prompt) {
    try {
-     const response = await fetch(`${API_BASE_URL}/api/generate-content`, {
+     // Show loading state
+     const generateBtn = document.getElementById('generate-btn');
+     const generateText = document.getElementById('generate-text');
+     generateBtn.disabled = true;
+     generateText.textContent = 'Generating...';
+
+     const response = await fetch(`${API_BASE_URL}/generate-content`, {  // Fixed URL
        method: 'POST',
        headers: {
          'Content-Type': 'application/json',
@@ -232,29 +253,189 @@
      }
 
      const data = await response.json();
-     console.log('Generated Content:', data.generatedContent);
-
+     
      // Display the generated content
-     const generatedContent = document.getElementById('generated-content');
      const contentPlaceholder = document.getElementById('content-placeholder');
      const tabsContainer = document.getElementById('tabs-container');
-
+     const generatedContent = document.getElementById('generated-content');
+     const charCount = document.getElementById('character-count');
+     
      if (data.generatedContent) {
-       generatedContent.textContent = data.generatedContent;
+       // Split content into LinkedIn and Twitter sections
+       const sections = data.generatedContent.split('\n\n');
+       let formattedContent = '';
+       if (sections.length === 1) {
+         // If only one section, just show it
+         formattedContent = `<div class="content-section">${sections[0]}</div>`;
+       } else {
+         formattedContent = sections.map(section => {
+           if (section.toLowerCase().includes('linkedin')) {
+             return `<div class="content-section linkedin">
+               <h4>LinkedIn Post</h4>
+               <div class="content-box">
+                 <div class="content-actions">
+                   <button class="copy-btn" data-content="${encodeURIComponent(section.replace('LinkedIn:', '').trim())}">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                     </svg>
+                     Copy
+                   </button>
+                 </div>
+                 ${section.replace('LinkedIn:', '').trim()}
+               </div>
+             </div>`;
+           } else if (section.toLowerCase().includes('twitter')) {
+             return `<div class="content-section twitter">
+               <h4>Twitter Post</h4>
+               <div class="content-box">
+                 <div class="content-actions">
+                   <button class="copy-btn" data-content="${encodeURIComponent(section.replace('Twitter:', '').trim())}">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                     </svg>
+                     Copy
+                   </button>
+                 </div>
+                 ${section.replace('Twitter:', '').trim()}
+               </div>
+             </div>`;
+           }
+           return `<div class="content-section">${section}</div>`;
+         }).join('');
+       }
+
+       // Update the display
        contentPlaceholder.style.display = 'none';
        tabsContainer.style.display = 'block';
-       generatedContent.style.display = 'block'; // Ensure the content is visible
+       generatedContent.innerHTML = formattedContent;
+       generatedContent.style.display = 'block';
+       generatedContent.parentElement.style.display = 'block'; // Ensure parent is visible
+       
+       // Update character count
+       const totalChars = data.generatedContent.length;
+       charCount.textContent = `Character count: ${totalChars}`;
+       charCount.style.display = 'block';
+
+       // Enable the action buttons
+       document.getElementById('regenerate-btn').disabled = false;
+       document.getElementById('save-btn').disabled = false;
+
+       // Add click handlers for copy buttons
+       document.querySelectorAll('.copy-btn').forEach(btn => {
+         btn.addEventListener('click', async () => {
+           const content = decodeURIComponent(btn.dataset.content);
+           try {
+             await navigator.clipboard.writeText(content);
+             const originalText = btn.innerHTML;
+             btn.innerHTML = `
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                 <path d="M20 6L9 17l-5-5"></path>
+               </svg>
+               Copied!
+             `;
+             setTimeout(() => {
+               btn.innerHTML = originalText;
+             }, 2000);
+           } catch (err) {
+             console.error('Failed to copy:', err);
+           }
+         });
+       });
      } else {
        alert('No content generated. Please try again.');
      }
    } catch (error) {
      console.error('Error generating content:', error);
      alert('Failed to generate content. Please try again.');
+   } finally {
+     // Reset button state
+     const generateBtn = document.getElementById('generate-btn');
+     const generateText = document.getElementById('generate-text');
+     generateBtn.disabled = false;
+     generateText.textContent = 'Generate Content';
    }
  }
 
+// Add Task Form functionality
+function showTaskForm() {
+  const overlay = document.getElementById('task-form-overlay');
+  overlay.style.display = 'flex';
+  
+  // Set minimum datetime to now
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Convert to local time
+  const datetime = document.getElementById('task-datetime');
+  datetime.min = now.toISOString().slice(0, 16);
+  datetime.value = now.toISOString().slice(0, 16);
+}
+
+function hideTaskForm() {
+  const overlay = document.getElementById('task-form-overlay');
+  overlay.style.display = 'none';
+}
+
+// Handle task form submission
+async function handleTaskSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+  
+  // Get the local datetime and convert to UTC
+  const localDateTime = new Date(form.querySelector('#task-datetime').value);
+  const startDateTime = new Date(localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000);
+  const durationMinutes = parseInt(form.querySelector('#task-duration').value);
+  const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+
+  const formData = {
+    task_summary: form.querySelector('#task-title').value,
+    task_description: form.querySelector('#task-description').value,
+    start_time: startDateTime.toISOString(),
+    end_time: endDateTime.toISOString()
+  };
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/create_task`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (response.status === 401) {
+      window.location.href = `${API_BASE_URL}/auth`;
+      return;
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create task');
+    }
+
+    const result = await response.json();
+    console.log('Task created:', result);
+    
+    // Hide the form and refresh tasks
+    hideTaskForm();
+    form.reset();
+    fetchTasks();
+  } catch (error) {
+    console.error('Error creating task:', error);
+    alert(error.message || 'Failed to create task. Please try again.');
+  }
+}
+
+// Helper function to calculate end time based on duration
+function calculateEndTime(startTime, durationMinutes) {
+  const start = new Date(startTime);
+  const end = new Date(start.getTime() + durationMinutes * 60000);
+  return end.toISOString().slice(0, 19) + 'Z';
+}
+
  // Initialize
  function init() {
+   console.log("init() called");
    // Set current date
    setCurrentDate();
    
@@ -295,16 +476,117 @@
    // Fetch tasks and AI suggestions
    fetchTasks();
    fetchAISuggestions();
- }
 
- // Add event listener for fetching goal suggestions
- document.getElementById('fetch-goal-suggestions-btn').addEventListener('click', () => {
-   const goalInput = document.getElementById('goal-input').value;
-   if (goalInput.trim()) {
-     fetchGoalSuggestions(goalInput);
-   } else {
-     alert('Please enter a goal to get suggestions.');
+   // Add Task form event listeners
+   document.querySelectorAll('.add-task-button, .button.button-outline').forEach(button => {
+     button.addEventListener('click', showTaskForm);
+   });
+
+   document.getElementById('cancel-task').addEventListener('click', hideTaskForm);
+   document.getElementById('task-form').addEventListener('submit', handleTaskSubmit);
+
+   // Set initial minimum datetime for the form
+   const now = new Date();
+   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+   const datetime = document.getElementById('task-datetime');
+   if (datetime) {
+     datetime.min = now.toISOString().slice(0, 16);
+     datetime.value = now.toISOString().slice(0, 16);
    }
+
+   // Suggest subtasks button
+   document.getElementById('suggest-btn').addEventListener('click', async () => {
+     const taskTitle = document.getElementById('task-title').value;
+     if (!taskTitle) {
+       alert('Please enter a task title first');
+       return;
+     }
+
+     try {
+       const response = await fetch(`${API_BASE_URL}/suggest`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ task_summary: taskTitle }),
+       });
+
+       if (!response.ok) {
+         throw new Error('Failed to get suggestions');
+       }
+
+       const data = await response.json();
+       const container = document.getElementById('suggestions-container');
+       container.innerHTML = data.subtasks.map(subtask => `
+         <div class="suggestion-item">
+           <input type="checkbox" id="subtask-${subtask}" name="subtasks[]" value="${subtask}">
+           <label for="subtask-${subtask}">${subtask}</label>
+         </div>
+       `).join('');
+     } catch (error) {
+       console.error('Error getting suggestions:', error);
+       alert('Failed to get suggestions. Please try again.');
+     }
+   });
+
+   // AI Suggestions button handler
+   document.querySelector('.button.button-primary').addEventListener('click', async () => {
+     // Create and show suggestions modal first
+     const modal = document.createElement('div');
+     modal.className = 'overlay';
+     modal.style.display = 'flex';
+     modal.innerHTML = `
+       <div class="task-form-container">
+         <h3>AI Task Suggestions</h3>
+         <div class="form-group">
+           <label for="mood-topic">How are you feeling? Or what would you like to focus on?</label>
+           <input type="text" id="mood-topic" placeholder="Enter mood (e.g., energetic, creative) or topic (e.g., health, coding)">
+         </div>
+         <button type="button" class="get-suggestions-btn">Get Personalized Suggestions</button>
+         <div class="suggestions-list"></div>
+         <div class="form-actions">
+           <button type="button" class="close-suggestions">Close</button>
+         </div>
+       </div>
+     `;
+     
+     document.body.appendChild(modal);
+     
+     // Add event listeners
+     const getSuggestionsBtn = modal.querySelector('.get-suggestions-btn');
+     const moodTopicInput = modal.querySelector('#mood-topic');
+     const suggestionsList = modal.querySelector('.suggestions-list');
+     
+     getSuggestionsBtn.addEventListener('click', async () => {
+       const moodOrTopic = moodTopicInput.value.trim();
+       if (!moodOrTopic) {
+         alert('Please enter your mood or a topic of interest');
+         return;
+       }
+       
+       try {
+         getSuggestionsBtn.disabled = true;
+         getSuggestionsBtn.textContent = 'Getting suggestions...';
+         
+       const response = await fetch(`${API_BASE_URL}/api/suggest-by-mood`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ mood_or_topic: moodOrTopic }),
+       });
+     } catch (error) {
+       console.error('Error fetching suggestions by mood:', error);
+       alert('Failed to fetch suggestions. Please try again.');
+     } finally {
+       getSuggestionsBtn.disabled = false;
+       getSuggestionsBtn.textContent = 'Get Personalized Suggestions';
+     }
+   });
+
+   modal.querySelector('.close-suggestions').addEventListener('click', () => {
+     document.body.removeChild(modal);
+   });
  });
 
  // Add event listener to the Generate Content button
@@ -318,5 +600,22 @@
    }
  });
 
+ // Add event listener for the Goals tab 'Get Suggestions' button
+ const fetchGoalBtn = document.getElementById('fetch-goal-suggestions-btn');
+ if (fetchGoalBtn) {
+   fetchGoalBtn.addEventListener('click', () => {
+     const goalInput = document.getElementById('goal-input').value.trim();
+     console.log('Get Suggestions clicked. Goal:', goalInput);
+     if (goalInput) {
+       fetchGoalSuggestions(goalInput);
+     } else {
+       alert('Please enter your goal first.');
+     }
+   });
+ }
+
  // Run initialization
- document.addEventListener('DOMContentLoaded', init);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+console.log("DOMContentLoaded event fired");
