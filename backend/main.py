@@ -46,10 +46,8 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 # Get environment-specific redirect URI
 def get_redirect_uri():
-    env = os.getenv('ENVIRONMENT', 'development')
-    if env == 'production':
-        return 'https://smart-planner-dad4.onrender.com/auth/callback'
-    return 'http://localhost:8000/auth/callback'
+    # Always use the Render.com production URL for OAuth callback
+    return 'https://smart-planner-dad4.onrender.com/auth/callback'
 
 REDIRECT_URI = get_redirect_uri()
 
