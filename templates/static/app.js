@@ -20,25 +20,50 @@ console.log("Setting up DOMContentLoaded listener");
    currentDateElement.textContent = now.toLocaleDateString('en-US', options);
  }
 
- // Toggle sidebar
+ // Mobile sidebar toggle and overlay logic
+ function openSidebar() {
+   sidebar.classList.add('open');
+   mainContent.classList.add('sidebar-open');
+   document.body.classList.add('sidebar-overlay');
+ }
+
+ function closeSidebar() {
+   sidebar.classList.remove('open');
+   mainContent.classList.remove('sidebar-open');
+   document.body.classList.remove('sidebar-overlay');
+ }
+
  function toggleSidebar() {
-   sidebar.classList.toggle('open');
-   
-   // Update the toggle icon
-   const toggleIcon = sidebarToggle.querySelector('svg');
    if (sidebar.classList.contains('open')) {
-     toggleIcon.innerHTML = `
-       <line x1="18" y1="6" x2="6" y2="18"></line>
-       <line x1="6" y1="6" x2="18" y2="18"></line>
-     `;
+     closeSidebar();
    } else {
-     toggleIcon.innerHTML = `
-       <line x1="3" y1="12" x2="21" y2="12"></line>
-       <line x1="3" y1="6" x2="21" y2="6"></line>
-       <line x1="3" y1="18" x2="21" y2="18"></line>
-     `;
+     openSidebar();
    }
  }
+
+ if (sidebarToggle) {
+   sidebarToggle.addEventListener('click', toggleSidebar);
+ }
+
+ // Close sidebar when clicking outside (on overlay)
+ document.addEventListener('click', function (e) {
+   if (
+     sidebar.classList.contains('open') &&
+     document.body.classList.contains('sidebar-overlay') &&
+     !sidebar.contains(e.target) &&
+     e.target !== sidebarToggle &&
+     !sidebarToggle.contains(e.target)
+   ) {
+     closeSidebar();
+   }
+ });
+
+ // Optional: close sidebar on ESC key
+ window.addEventListener('keydown', function (e) {
+   if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+     closeSidebar();
+   }
+ });
 
  // Ensure the correct tab content is displayed
  function switchTab(event) {

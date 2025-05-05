@@ -14,6 +14,11 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Mobile sidebar toggle button -->
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open sidebar">
+            <svg width="28" height="28" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+
         <!-- Left sidebar menu -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -50,6 +55,10 @@
                 <div class="progress-bar">
                     <div class="progress-indicator" style="width: 28%;"></div>
                 </div>
+            </div>
+            <!-- Logout button -->
+            <div style="padding: 1rem;">
+                <a href="/logout" class="button button-outline" style="width:100%;text-align:center;">Logout</a>
             </div>
         </aside>
 

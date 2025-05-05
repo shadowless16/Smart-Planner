@@ -170,11 +170,16 @@ def list_events(request: Request, start: str = None, end: str = None):
     service = build("calendar", "v3", credentials=Credentials(**creds))
     from typing import Optional
     from datetime import datetime
+    def clean_google_time(dt_str):
+        # Remove Z if +00:00 is present, else keep Z
+        if dt_str.endswith('Z') and ('+' in dt_str or '-' in dt_str):
+            return dt_str[:-1]
+        return dt_str
     # If start and end are provided, use them; else default to today
     if start and end:
         try:
-            time_min = datetime.fromisoformat(start.replace('Z', '+00:00')).isoformat() + 'Z'
-            time_max = datetime.fromisoformat(end.replace('Z', '+00:00')).isoformat() + 'Z'
+            time_min = clean_google_time(start)
+            time_max = clean_google_time(end)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid date format for start or end")
     else:
@@ -191,6 +196,12 @@ def list_events(request: Request, start: str = None, end: str = None):
     ).execute()
     events = events_result.get("items", [])
     return {"events": events}
+
+@app.get("/logout")
+def logout():
+    response = HTMLResponse(content="<h2>Logged out successfully.</h2>")
+    response.delete_cookie(key=COOKIE_NAME)
+    return response
 
 class TaskRequest(BaseModel):
     task_summary: str
