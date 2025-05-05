@@ -9,6 +9,7 @@ import os, json
 import os.path
 from pathlib import Path
 from itsdangerous import URLSafeSerializer, BadSignature
+import tempfile
 
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -43,6 +44,18 @@ app.add_middleware(
 # Google OAuth setup
 CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), "credentials.json")
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+def get_client_secrets_file():
+    # Try to load credentials from environment variable first
+    google_creds_env = os.getenv("GOOGLE_CREDENTIALS")
+    if google_creds_env:
+        # Write the credentials to a temporary file and return its path
+        temp = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+        temp.write(google_creds_env.encode())
+        temp.close()
+        return temp.name
+    # Fallback to credentials.json file
+    return CLIENT_SECRETS_FILE
 
 # Get environment-specific redirect URI
 def get_redirect_uri():
@@ -86,14 +99,14 @@ async def serve_service_worker():
 @app.get("/auth")
 def auth():
     try:
-        if not os.path.exists(CLIENT_SECRETS_FILE):
+        secrets_file = get_client_secrets_file()
+        if not os.path.exists(secrets_file):
             raise HTTPException(
                 status_code=500,
                 detail="Google OAuth credentials file (credentials.json) not found. Please configure your Google OAuth credentials."
             )
-            
         flow = Flow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
+            secrets_file,
             scopes=SCOPES,
             redirect_uri=REDIRECT_URI,
         )
@@ -112,8 +125,9 @@ def auth_callback(request: Request):
     if not code:
         raise HTTPException(status_code=400, detail="Missing code")
 
+    secrets_file = get_client_secrets_file()
     flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
+        secrets_file,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI,
     )
