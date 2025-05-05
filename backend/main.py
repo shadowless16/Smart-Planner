@@ -171,11 +171,9 @@ def list_events(request: Request, start: str = None, end: str = None):
     from typing import Optional
     from datetime import datetime
     def clean_google_time(dt_str):
-        # Remove Z if +00:00 is present, else keep Z
         if dt_str.endswith('Z') and ('+' in dt_str or '-' in dt_str):
             return dt_str[:-1]
         return dt_str
-    # If start and end are provided, use them; else default to today
     if start and end:
         try:
             time_min = clean_google_time(start)
@@ -195,7 +193,28 @@ def list_events(request: Request, start: str = None, end: str = None):
         maxResults=2500
     ).execute()
     events = events_result.get("items", [])
-    return {"events": events}
+    # Map events to a user-friendly timeline format
+    timeline = []
+    for ev in events:
+        # Prefer start.dateTime, fallback to start.date
+        start_time = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date")
+        if start_time:
+            try:
+                # Parse and format time as e.g. '2:30 PM' or 'All Day'
+                if 'T' in start_time:
+                    dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                    time_str = dt.strftime('%-I:%M %p') if dt.minute else dt.strftime('%-I %p')
+                else:
+                    time_str = 'All Day'
+            except Exception:
+                time_str = start_time
+        else:
+            time_str = 'Unknown'
+        timeline.append({
+            "time": time_str,
+            "task": ev.get("summary", "(No Title)")
+        })
+    return {"events": events, "timeline": timeline}
 
 @app.get("/logout")
 def logout():
